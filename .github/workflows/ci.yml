@@ -36,7 +36,11 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
             cd ${{ secrets.WORK_DIR }} || (mkdir -p ${{ secrets.WORK_DIR }} && cd ${{ secrets.WORK_DIR }});
-            git pull origin main;
+            git pull origin main
+            docker compose down
+            docker prune system -af
+            docker prune image -af
+            docker compose up -d
           "
 
       - name: Clean up SSH key
