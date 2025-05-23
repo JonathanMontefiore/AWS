@@ -1,48 +1,46 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline for ReactJS Deployment
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+      - name: Update packages and install openssh-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-client
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests
-        run: npm test -- --passWithNoTests
-
-      - name: Install SSH client
-        run: sudo apt-get update && sudo apt-get install -y openssh-client
-
-      - name: Setup SSH
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          
-      - name: Deploy to VPS
-        run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd ${{ secrets.WORK_DIR }}
-            git pull origin ${{ secrets.MAIN_BRANCH }}
-            docker-compose down
-            docker-compose rm -f
-            docker-compose up -d --build
-          EOF
 
-      - name: Clean up SSH
-        run: rm -rf ~/.ssh
+      - name: Add SSH host to known_hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd ${{ secrets.WORK_DIR }} || (mkdir -p ${{ secrets.WORK_DIR }} && cd ${{ secrets.WORK_DIR }});
+            git pull origin main;
+          "
+
+      - name: Clean up SSH key
+        run: |
+          rm -rf ~/.ssh
+
 
