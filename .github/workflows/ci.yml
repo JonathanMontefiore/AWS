@@ -1,10 +1,7 @@
-name: CI/CD Pipeline for ReactJS Deployment
+name: Deploy to EC2
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
     branches:
       - main
 
@@ -13,32 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Update packages and install openssh-client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y openssh-client
+      - name: Update packages
+        run: sudo apt-get update
 
-      - name: Setup SSH key
+      - name: Install SSH client
+        run: sudo apt-get install -y openssh-client
+
+      - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-      - name: Add SSH host to known_hosts
+      - name: SSH and deploy
         run: |
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /chemin/vers/votre/projet
+            git pull origin main
+            # Vous pouvez ajouter d'autres commandes ici comme "npm install", "npm run build", etc.
+          EOF
 
-      - name: Deploy to EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            cd ${{ secrets.WORK_DIR }} || (mkdir -p ${{ secrets.WORK_DIR }} && cd ${{ secrets.WORK_DIR }});
-            git pull origin main;
-          "
-
-      - name: Clean up SSH key
-        run: |
-          rm -rf ~/.ssh
+      - name: Cleanup SSH
+        run: rm -rf ~/.ssh
