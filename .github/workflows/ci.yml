@@ -30,7 +30,7 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             cd /chemin/vers/votre/projet
             git pull origin main
-            # Vous pouvez ajouter d'autres commandes ici comme "npm install", "npm run build", etc.
+            # pouvez ajouter d'autres commandes ici comme "npm install", "npm run build", etc.
           EOF
 
       - name: Cleanup SSH
